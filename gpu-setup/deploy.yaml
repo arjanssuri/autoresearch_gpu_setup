@@ -1,0 +1,47 @@
+---
+version: "2.0"
+services:
+  autoresearch:
+    image: pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel
+    expose:
+      - port: 22
+        as: 22
+        to:
+          - global: true
+    env:
+      - PYTORCH_ALLOC_CONF=expandable_segments:True
+    command:
+      - /bin/bash
+      - -c
+      - "apt-get update && apt-get install -y git curl openssh-server python3-dev && mkdir -p /run/sshd && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && echo 'root:autoresearch' | chpasswd && /usr/sbin/sshd && curl -LsSf https://astral.sh/uv/install.sh | sh && export PATH=/root/.local/bin:$PATH && echo 'export PATH=/root/.local/bin:$PATH' >> /root/.bashrc && git clone https://github.com/karpathy/autoresearch.git /workspace/autoresearch && cd /workspace/autoresearch && uv sync && uv run prepare.py && echo '=== SETUP COMPLETE ===' && sleep infinity"
+profiles:
+  compute:
+    autoresearch:
+      resources:
+        cpu:
+          units: 8
+        memory:
+          size: 64Gi
+        storage:
+          size: 30Gi
+        gpu:
+          units: 1
+          attributes:
+            vendor:
+              nvidia:
+                - model: h100
+                - model: a100
+  placement:
+    akash:
+      signedBy:
+        anyOf:
+          - "akash1365yvmc4s7awdyj3n2sav7xfx76adc6dnmlx63"
+      pricing:
+        autoresearch:
+          denom: uakt
+          amount: 10000
+deployment:
+  autoresearch:
+    akash:
+      profile: autoresearch
+      count: 1

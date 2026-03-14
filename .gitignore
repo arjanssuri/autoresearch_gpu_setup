@@ -21,3 +21,9 @@ dev/
 
 # Results file
 results.tsv
+
+# Environment secrets
+.env
+
+# Akash deployment state
+gpu-setup/.deployment
