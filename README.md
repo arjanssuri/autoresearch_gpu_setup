@@ -21,8 +21,6 @@ gpu-setup/                   # Akash deployment scripts
 ├── teardown.sh              # close deployment
 ├── status.sh                # check deployment status
 └── deploy.yaml              # Akash SDL (container spec)
-
-article.md                   # writeup
 ```
 
 ## Quick start
