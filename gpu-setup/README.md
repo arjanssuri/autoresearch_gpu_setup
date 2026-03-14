@@ -1,90 +1,120 @@
 # gpu-setup
 
-One-command deployment of [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) on Akash Network. Spins up an H100/A100 GPU container, installs everything, downloads the dataset, and gives you SSH access.
+Run [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) on a cloud GPU through [Akash Network](https://akash.network). No hardware needed.
 
-## Prerequisites
+## Requirements
 
-- An [Akash Console](https://console.akash.network) account with credits
-- An API key from Akash Console (starts with `ac.sk.`)
-- `jq` and `sshpass` installed locally
+You need four things before starting:
+
+1. **An Akash Console account** — sign up at [console.akash.network](https://console.akash.network). New accounts get free credits.
+2. **An Akash API key** — grab one from the Console dashboard. It starts with `ac.sk.`.
+3. **jq** — a command line JSON tool. Install it:
+   - Mac: `brew install jq`
+   - Linux: `sudo apt-get install -y jq`
+4. **sshpass** — lets you SSH with a password in one command:
+   - Mac: `brew install hudochenkov/sshpass/sshpass`
+   - Linux: `sudo apt-get install -y sshpass`
+
+## Steps
+
+### 1. Clone the repo
 
 ```bash
-# macOS
-brew install jq hudochenkov/sshpass/sshpass
-
-# Ubuntu/Debian
-sudo apt-get install -y jq sshpass
+git clone https://github.com/arjanssuri/polyresearch.git
+cd polyresearch
 ```
 
-## Setup
+### 2. Add your API key
 
-Create a `.env` file in the repo root:
+Create a file called `.env` in the repo root:
 
+```bash
+echo "AKASH_API_KEY=ac.sk.production.your-key-here" > .env
 ```
-AKASH_API_KEY=ac.sk.production.your-key-here
-```
 
-## Deploy
+Replace `your-key-here` with your actual key.
+
+### 3. Deploy
 
 ```bash
 cd gpu-setup
 ./deploy.sh
 ```
 
-This will:
-1. Create a deployment on Akash ($5 escrow deposit)
-2. Wait for GPU provider bids
-3. Accept the cheapest H100/A100 bid
-4. Boot the container with PyTorch + CUDA
-5. Auto-install autoresearch, download data, train tokenizer
-6. Print SSH credentials when ready
+This takes about a minute. It will:
+- Put $5 from your credits into escrow
+- Find the cheapest available H100 or A100
+- Spin up a container with PyTorch and CUDA pre-installed
+- Clone autoresearch and download the training data
+- Print your SSH connection details
 
-Takes ~5 minutes for the container to fully set up.
+### 4. Wait for setup
 
-## Connect
+The container needs ~5 minutes after deploy to finish installing everything. You can check if it's ready:
+
+```bash
+./status.sh
+```
+
+Look for `"ready": 1`. That means it's good to go.
+
+### 5. SSH in
+
+The deploy script prints your exact SSH command. It looks like this:
 
 ```bash
 sshpass -p 'autoresearch' ssh -p <PORT> root@<HOST>
 ```
 
-The deploy script prints the exact command. Once in:
+Copy and run it. You're now on a machine with an H100 GPU.
+
+### 6. Run autoresearch
 
 ```bash
 cd /workspace/autoresearch
-
-# run a single training experiment (~5 min)
 uv run train.py
+```
 
-# or start the autonomous research loop with claude
+That runs one 5-minute training experiment. To start the full autonomous loop where the AI runs experiments on its own:
+
+```bash
+# install claude code
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y nodejs
+npm install -g @anthropic-ai/claude-code
+
+# set your anthropic key
+export ANTHROPIC_API_KEY=your-anthropic-key
+
+# start the loop
 claude "Read program.md and let's kick off a new experiment"
 ```
 
-## Other commands
+Walk away. Come back to results.
+
+### 7. Tear down when done
+
+Back on your local machine:
 
 ```bash
-# check deployment status
-./status.sh
-
-# tear down and recover remaining deposit
+cd gpu-setup
 ./teardown.sh
 ```
 
+This closes the deployment and returns any unspent credits.
+
 ## What you get
 
-- PyTorch 2.5.1 + CUDA 12.4 container
-- H100 80GB or A100 80GB GPU
+- NVIDIA H100 80GB or A100 80GB
 - 8 CPU cores, 64GB RAM, 30GB storage
-- autoresearch repo cloned and ready at `/workspace/autoresearch`
-- SSH access with password `autoresearch`
+- PyTorch 2.5.1 + CUDA 12.4
+- autoresearch cloned and ready at `/workspace/autoresearch`
+- SSH password: `autoresearch`
 
 ## Cost
 
-GPU pricing varies by provider. With $100 in Akash credits you can run for several hours. The deploy script picks the cheapest available bid automatically.
+The deploy script picks the cheapest GPU bid automatically. With $100 in credits you can run for several hours. The $5 escrow deposit gets returned (minus usage) when you tear down.
 
 ## Customizing
 
-Edit `deploy.yaml` to change:
-- GPU model (default: H100 or A100)
-- CPU/memory/storage allocation
-- Docker base image
-- Startup commands
+Edit `deploy.yaml` if you want to change the GPU model, memory, storage, or base Docker image.
